@@ -11,6 +11,9 @@ from bs4 import BeautifulSoup
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 
+from app.utils import load_dataset
+
+
 # Helper: safe check for image-like URL
 def _looks_like_image_url(s: Optional[str]) -> bool:
     if not isinstance(s, str):
@@ -21,14 +24,13 @@ def _looks_like_image_url(s: Optional[str]) -> bool:
     s_low = s.lower()
     if s_low.startswith("http") and any(ext in s_low for ext in [".jpg", ".jpeg", ".png", ".webp", ".gif"]):
         return True
-    # some CDN image urls may not end with ext but contain /images/ or cdn
     if "cdn" in s_low or "images" in s_low:
         return True
     return False
 
+
 class RecommendationEngine:
-    def __init__(self, csv_path: str, image_cache_path: str, placeholder_image: str, tfidf_min_df: int = 1):
-        self.csv_path = csv_path
+    def __init__(self, image_cache_path: str, placeholder_image: str, tfidf_min_df: int = 1):
         self.image_cache_path = image_cache_path
         self.placeholder_image = placeholder_image
         self.tfidf_min_df = max(1, int(tfidf_min_df))
@@ -37,31 +39,25 @@ class RecommendationEngine:
         self.image_cache = {}
         self._load_image_cache()
 
-        self._load_data()
+        # ✅ use utils.load_dataset() instead of reading CSV directly
+        self.df = load_dataset()
+        self._normalize_data()
         self._prepare_text_index()
 
-    # ---------- data load ----------
-    def _load_data(self):
-        if not os.path.exists(self.csv_path):
-            raise FileNotFoundError(f"Data CSV not found at {self.csv_path}")
-        # read CSV; allow large files
-        self.df = pd.read_csv(self.csv_path, dtype=str, low_memory=False).fillna("")
+    # ---------- normalize after loading ----------
+    def _normalize_data(self):
         # normalize columns
         self.df.columns = [c.strip() for c in self.df.columns]
 
-        # expected columns: uniq_id, crawl_timestamp, product_url, product_name, product_category_tree, pid,
-        # retail_price, discounted_price, image, is_FK_Advantage_product, description, product_rating, overall_rating,
-        # brand, product_specifications
-
-        # Ensure presence of expected columns
-        expected = ["uniq_id", "crawl_timestamp", "product_url", "product_name", "product_category_tree",
-                    "pid", "retail_price", "discounted_price", "image", "is_FK_Advantage_product",
-                    "description", "product_rating", "overall_rating", "brand", "product_specifications"]
+        expected = [
+            "uniq_id", "crawl_timestamp", "product_url", "product_name", "product_category_tree",
+            "pid", "retail_price", "discounted_price", "image", "is_FK_Advantage_product",
+            "description", "product_rating", "overall_rating", "brand", "product_specifications"
+        ]
         for c in expected:
             if c not in self.df.columns:
                 self.df[c] = ""
 
-        # Decide rating_final from overall_rating or product_rating
         def _tofloat(x):
             try:
                 return float(x)
@@ -71,15 +67,9 @@ class RecommendationEngine:
         self.df["overall_rating_num"] = self.df["overall_rating"].apply(_tofloat)
         self.df["product_rating_num"] = self.df["product_rating"].apply(_tofloat)
         self.df["rating_final"] = self.df["overall_rating_num"].fillna(self.df["product_rating_num"]).fillna(0.0)
-
-        # review_count not provided -> set to 0
         self.df["review_count"] = 0
-
-        # lowercased name for lookups
         self.df["name_lc"] = self.df["product_name"].str.lower()
-
-        # resolve image if 'image' column already directly contains image URL
-        self.df["resolved_image"] = self.df["image"].apply(lambda s: s.strip() if _looks_like_image_url(s.strip()) else "")
+        self.df["resolved_image"] = self.df["image"].apply(lambda s: s.strip() if _looks_like_image_url(str(s).strip()) else "")
 
     # ---------- image cache ----------
     def _load_image_cache(self):
@@ -111,14 +101,12 @@ class RecommendationEngine:
                 return None
             soup = BeautifulSoup(resp.text, "html.parser")
 
-            # og:image
             meta_og = soup.find("meta", property="og:image")
             if meta_og and meta_og.get("content"):
                 img = meta_og["content"].strip()
                 if _looks_like_image_url(img):
                     return img
 
-            # JSON-LD
             for script in soup.find_all("script", type="application/ld+json"):
                 try:
                     data = json.loads(script.string or "{}")
@@ -133,14 +121,12 @@ class RecommendationEngine:
                 except Exception:
                     continue
 
-            # try first <img> that looks like product image
             imgs = soup.find_all("img", src=True)
             for tag in imgs:
                 src = tag["src"].strip()
                 if src.startswith("//"):
                     src = "https:" + src
                 if src.startswith("/") and page_url:
-                    # build absolute
                     from urllib.parse import urljoin
                     src = urljoin(page_url, src)
                 if _looks_like_image_url(src):
@@ -150,19 +136,10 @@ class RecommendationEngine:
         return None
 
     def get_image_for_row(self, row: pd.Series) -> str:
-        """
-        Determine best image URL for a product row:
-        1) resolved_image column if already direct image URL
-        2) cached mapping for product_url
-        3) scrape product_url for an image and cache result
-        4) placeholder image
-        """
-        # 1
         img = str(row.get("resolved_image", "") or "").strip()
         if _looks_like_image_url(img):
             return img
 
-        # product page url field (product_url or image column may contain product page)
         page_url_candidates = [row.get("product_url", ""), row.get("image", "")]
         for pu in page_url_candidates:
             pu = str(pu or "").strip()
@@ -172,22 +149,17 @@ class RecommendationEngine:
                 cached = self.image_cache[pu]
                 if _looks_like_image_url(cached):
                     return cached
-            # attempt to scrape (light)
             scraped = self._scrape_image_from_page(pu)
             if scraped:
-                # cache and return
                 with self._cache_lock:
                     self.image_cache[pu] = scraped
-                    # write cache asynchronously (spawn small thread to avoid blocking)
                     threading.Thread(target=self._save_image_cache, daemon=True).start()
                 return scraped
 
-        # fallback
         return self.placeholder_image
 
     # ---------- text index ----------
     def _prepare_text_index(self):
-        # combine fields
         combined = (
             self.df["product_name"].fillna("") + " " +
             self.df["brand"].fillna("") + " " +
@@ -197,23 +169,19 @@ class RecommendationEngine:
         ).str.lower()
         self.df["combined_text"] = combined
 
-        # Choose texts for TF-IDF (fallbacks handled)
         texts = combined
         if texts.str.strip().replace("", pd.NA).dropna().empty:
             texts = self.df["product_name"].fillna("")
 
-        # safe TF-IDF build
         try:
             self.vectorizer = TfidfVectorizer(stop_words="english", min_df=self.tfidf_min_df, ngram_range=(1,2))
             self.tfidf_matrix = self.vectorizer.fit_transform(texts)
         except Exception:
-            # fallback
             self.vectorizer = TfidfVectorizer(stop_words="english", min_df=1)
             self.tfidf_matrix = self.vectorizer.fit_transform(self.df["product_name"].fillna(""))
 
     # ---------- public API ----------
     def get_top_rated(self, n: int = 12, min_reviews: int = 0) -> List[Dict]:
-        # choose rating_final column
         df = self.df.copy()
         if min_reviews > 0:
             df = df[df["review_count"].astype(int) >= min_reviews]
@@ -225,19 +193,16 @@ class RecommendationEngine:
         if not q:
             return self.get_top_rated(n)
 
-        # exact match
         mask_exact = self.df["name_lc"] == q
         if mask_exact.any():
             idx = int(self.df[mask_exact].index[0])
             return self.content_by_index(idx, n)
 
-        # contains
         mask_contains = self.df["name_lc"].str.contains(q, na=False)
         if mask_contains.any():
             idx = int(self.df[mask_contains].index[0])
             return self.content_by_index(idx, n)
 
-        # vectorize query
         try:
             q_vec = self.vectorizer.transform([q])
             sims = linear_kernel(q_vec, self.tfidf_matrix).flatten()
@@ -279,7 +244,6 @@ class RecommendationEngine:
         for _, r in df_rows.iterrows():
             image_url = r.get("resolved_image") or ""
             if not _looks_like_image_url(image_url):
-                # try cached or scrape
                 image_url = self.get_image_for_row(r)
             price = r.get("discounted_price") or r.get("retail_price") or ""
             try:
