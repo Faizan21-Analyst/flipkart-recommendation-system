@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="mb-3">Top Rated Products</h3>
+
+{% if products %}
+  <div class="row g-3">
+    {% for p in products %}
+      <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+        <div class="card h-100">
+          <img src="{{ p.image }}" class="card-img-top object-fit-contain p-3" alt="{{ p.product_name }}" onerror="this.src='{{ url_for('static', filename='css/no-image.png') }}'">
+          <div class="card-body d-flex flex-column">
+            <h6 class="card-title">{{ p.product_name }}</h6>
+            <div class="small text-muted mb-1">{{ p.brand }}</div>
+            <div class="mb-1">⭐ {{ '%.1f'|format(p.rating) }}</div>
+            {% if p.price %}
+              <div class="fw-bold mb-2">₹ {{ '%.2f'|format(p.price) }}</div>
+            {% endif %}
+            <form method="post" action="{{ url_for('main.buy') }}" class="mt-auto">
+              <input type="hidden" name="uniq_id" value="{{ p.uniq_id }}">
+              <input type="hidden" name="product_name" value="{{ p.product_name }}">
+              <input type="hidden" name="product_url" value="{{ p.product_url }}">
+              <input type="text" name="user_id" class="form-control mb-2" placeholder="Your user id (optional)">
+              <button class="btn btn-success w-100" type="submit">Buy</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-warning">No products available.</div>
+{% endif %}
+{% endblock %}
