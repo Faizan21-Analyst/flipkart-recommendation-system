@@ -1,30 +1,25 @@
-import csv
 import os
-from typing import Dict, List
+import pandas as pd
+import requests
 
-def append_purchase(purchases_csv_path: str, record: Dict):
-    """
-    Append a purchase record to CSV. Creates file with header if missing.
-    record keys: user_id, uniq_id, product_name, product_url, timestamp
-    """
-    header = ["user_id", "uniq_id", "product_name", "product_url", "timestamp"]
-    exists = os.path.exists(purchases_csv_path)
+DATA_PATH = os.path.join("data", "your_products.csv")
 
-    os.makedirs(os.path.dirname(purchases_csv_path), exist_ok=True)
+# Google Drive direct download link (replace with your file ID)
+DATA_URL = "https://drive.google.com/uc?export=download&id=1_itNCEJGGXwVKYW33MWS9lQHU_HPvTq1"
 
-    with open(purchases_csv_path, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=header)
-        if not exists:
-            writer.writeheader()
-        row = {k: record.get(k, "") for k in header}
-        writer.writerow(row)
+def ensure_dataset():
+    """Download dataset if not already available."""
+    os.makedirs("data", exist_ok=True)
+    if not os.path.exists(DATA_PATH):
+        print("Downloading dataset from Google Drive...")
+        r = requests.get(DATA_URL, stream=True)
+        with open(DATA_PATH, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+    return DATA_PATH
 
-def read_purchases(purchases_csv_path: str) -> List[Dict]:
-    if not os.path.exists(purchases_csv_path):
-        return []
-    import pandas as pd
-    try:
-        df = pd.read_csv(purchases_csv_path)
-        return df.to_dict(orient="records")
-    except Exception:
-        return []
+def load_dataset():
+    """Load dataset as DataFrame."""
+    ensure_dataset()
+    return pd.read_csv(DATA_PATH)
