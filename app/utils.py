@@ -1,13 +1,13 @@
 # app/utils.py
 import os
+import json
 import pandas as pd
 import gdown
 
+# ---------- Dataset Setup ----------
 DATA_PATH = os.path.join("data", "your_products.csv")
-
-FILE_ID = "1_itNCEJGGXwVKYW33MWS9lQHU_HPvTq1"
+FILE_ID = "1_itNCEJGGXwVKYW33MWS9lQHU_HPvTq1"   # Google Drive file ID
 DATA_URL = f"https://drive.google.com/uc?id={FILE_ID}"
-
 
 def ensure_dataset():
     """Download dataset from Google Drive if not already available."""
@@ -44,3 +44,35 @@ def load_dataset():
         raise ValueError("Dataset has no valid product names after cleaning!")
 
     return df
+
+
+# ---------- Purchase Tracking ----------
+PURCHASE_FILE = os.path.join("data", "purchases.json")
+
+def append_purchase(user_id, product_name):
+    """Append a purchase record to purchases.json"""
+    os.makedirs("data", exist_ok=True)
+    purchases = []
+    
+    if os.path.exists(PURCHASE_FILE):
+        with open(PURCHASE_FILE, "r") as f:
+            try:
+                purchases = json.load(f)
+            except json.JSONDecodeError:
+                purchases = []
+
+    purchases.append({"user_id": user_id, "product_name": product_name})
+
+    with open(PURCHASE_FILE, "w") as f:
+        json.dump(purchases, f)
+
+
+def read_purchases():
+    """Read all purchases from purchases.json"""
+    if os.path.exists(PURCHASE_FILE):
+        with open(PURCHASE_FILE, "r") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return []
+    return []
