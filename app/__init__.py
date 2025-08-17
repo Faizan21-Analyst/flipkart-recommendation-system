@@ -1,21 +1,21 @@
+import os
 from flask import Flask
+from app.recommender import RecommendationEngine
 from config import Config
 
-def create_app(config_class=Config):
-    app = Flask(__name__, template_folder="templates", static_folder="static")
-    app.config.from_object(config_class)
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
 
-    # instantiate recommender and attach to app
-    from app.recommender import RecommendationEngine
+    # Initialize Recommendation Engine correctly (no csv_path needed)
     app.recommender = RecommendationEngine(
-        csv_path=app.config["DATA_CSV"],
-        image_cache_path=app.config["IMAGE_CACHE_JSON"],
-        placeholder_image=app.config["PLACEHOLDER_IMAGE"],
-        tfidf_min_df=app.config["TFIDF_MIN_DF"]
+        image_cache_path=Config.IMAGE_CACHE_JSON,
+        placeholder_image=Config.PLACEHOLDER_IMAGE,
+        tfidf_min_df=Config.TFIDF_MIN_DF
     )
 
-    # register routes
-    from app.routes import bp as main_bp
-    app.register_blueprint(main_bp)
+    # Register blueprints
+    from app.routes import bp as routes_bp
+    app.register_blueprint(routes_bp)
 
     return app
