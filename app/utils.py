@@ -29,7 +29,9 @@ def load_dataset():
 
     # ✅ Clean & validate product_name
     if "product_name" not in df.columns:
-        raise ValueError(f"'product_name' column not found! Available columns: {list(df.columns)}")
+        raise ValueError(
+            f"'product_name' column not found! Available columns: {list(df.columns)}"
+        )
 
     df["product_name"] = (
         df["product_name"]
