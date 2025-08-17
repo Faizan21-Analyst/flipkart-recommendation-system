@@ -22,12 +22,14 @@ def ensure_dataset():
     return DATA_PATH
 
 
+
 def load_dataset():
     """Load and clean dataset as DataFrame."""
     ensure_dataset()
-    df = pd.read_csv(DATA_PATH)
+    
+    # Skip bad rows that break parsing
+    df = pd.read_csv(DATA_PATH, on_bad_lines="skip", low_memory=False)
 
-    # ✅ Clean & validate product_name
     if "product_name" not in df.columns:
         raise ValueError(
             f"'product_name' column not found! Available columns: {list(df.columns)}"
