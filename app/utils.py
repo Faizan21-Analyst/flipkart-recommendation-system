@@ -13,6 +13,7 @@ def ensure_dataset():
     if not os.path.exists(DATA_PATH):
         print("Downloading dataset from Google Drive...")
         r = requests.get(DATA_URL, stream=True)
+        r.raise_for_status()  # raise error if download fails
         with open(DATA_PATH, 'wb') as f:
             for chunk in r.iter_content(chunk_size=1024):
                 if chunk:
@@ -20,6 +21,13 @@ def ensure_dataset():
     return DATA_PATH
 
 def load_dataset():
-    """Load dataset as DataFrame."""
+    """Load dataset as DataFrame safely."""
     ensure_dataset()
-    return pd.read_csv(DATA_PATH)
+    try:
+        return pd.read_csv(
+            DATA_PATH,
+            engine="python",          # use Python parser (handles irregular rows)
+            on_bad_lines="skip"       # skip problematic rows instead of crashing
+        )
+    except Exception as e:
+        raise RuntimeError(f"Failed to load dataset: {e}")
