@@ -76,7 +76,7 @@ Templates styled with Bootstrap 5.
 
 # 🚀 Deployment
 
-* Platform: Render
+* Platform: https://flipkart-recommendation-system-5.onrender.com
 
 * Procfile used for Gunicorn server.
 
