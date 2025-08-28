@@ -1,7 +1,7 @@
 # flipkart-recommendation-system
 
-🛒 Product Recommendation System (Flask + ML)
-📌 Project Overview
+ 🛒 Product Recommendation System (Flask + ML)
+# 📌 Project Overview
 
 This project is a Product Recommendation Web Application built with Flask.
 It provides personalized product recommendations for users, based on a dataset of Flipkart products.
@@ -9,27 +9,27 @@ The system combines content-based filtering, collaborative filtering, and hybrid
 
 We deployed the application on Render for free hosting.
 
-📂 Dataset
+# 📂 Dataset
 
-Source: Flipkart Product Dataset (Kaggle)
+* Source: Flipkart Product Dataset (Kaggle)
 
-Features used:
+* Features used:
 
-uniq_id → Unique product identifier
+* uniq_id → Unique product identifier
 
-product_name → Product title
+* product_name → Product title
 
-brand → Brand of product
+* brand → Brand of product
 
-price → Price in INR
+* price → Price in INR
 
-rating → User ratings
+* rating → User ratings
 
-product_url → Link to product page
+* product_url → Link to product page
 
-image → Image URL for display
+* image → Image URL for display
 
-⚙️ Methods & Logic
+# ⚙️ Methods & Logic
 1. Top-Rated Products
 
 Homepage shows most popular products ranked by rating.
@@ -74,7 +74,7 @@ recommend route: Returns personalized recommendations.
 
 Templates styled with Bootstrap 5.
 
-🚀 Deployment
+# 🚀 Deployment
 
 Platform: Render
 
