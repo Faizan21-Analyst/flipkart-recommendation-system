@@ -1,6 +1,6 @@
 # flipkart-recommendation-system
 
- 🛒 Product Recommendation System (Flask + ML)
+# 🛒 Product Recommendation System (Flask + ML)
 # 📌 Project Overview
 
 This project is a Product Recommendation Web Application built with Flask.
@@ -30,19 +30,19 @@ We deployed the application on Render for free hosting.
 * image → Image URL for display
 
 # ⚙️ Methods & Logic
-1. Top-Rated Products
+* 1. Top-Rated Products
 
 Homepage shows most popular products ranked by rating.
 
 Acts as a fallback for new users without purchase history.
 
-2. Purchase Logging
+* 2. Purchase Logging
 
 Every time a user clicks Buy, purchase data (user_id, uniq_id, product_name, product_url, timestamp) is logged in purchases.csv.
 
 This dataset helps track user preferences.
 
-3. Recommendation Engine
+* 3. Recommendation Engine
 
 We implemented three strategies inside recommender.py:
 
@@ -64,7 +64,7 @@ Combines both methods with a tunable weight parameter alpha.
 
 Balances similarity with popularity.
 
-4. Flask Web Application
+* 4. Flask Web Application
 
 index.html: Displays top products / recommendations.
 
@@ -76,23 +76,23 @@ Templates styled with Bootstrap 5.
 
 # 🚀 Deployment
 
-Platform: Render
+* Platform: Render
 
-Procfile used for Gunicorn server.
+* Procfile used for Gunicorn server.
 
-Virtual Environment Requirements:
+* Virtual Environment Requirements:
 
-Flask
+* Flask
 
-pandas
+* pandas
 
-scikit-learn
+* scikit-learn
 
-gunicorn
+* gunicorn
 
-numpy
+* numpy
 
-📊 Project Flow
+# 📊 Project Flow
 
 User visits homepage → sees Top Rated Products.
 
@@ -102,17 +102,17 @@ System generates recommendations for that user (based on purchase + dataset).
 
 User sees personalized recommendations on next visit.
 
-📸 Screenshots
+# 📸 Screenshots
 
-🏠 Homepage with top-rated products
+# 🏠 Homepage with top-rated products
 
-🔍 Product details with "Buy" button
+# 🔍 Product details with "Buy" button
 
-⭐ Recommended products page
+# ⭐ Recommended products page
 
-🧑‍💻 Author
+# 🧑‍💻 Author
 
-Faizan Shaikh
+* Faizan Shaikh
 
 Aspiring Data Analyst | Data Science Enthusiast
 
